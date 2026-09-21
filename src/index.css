@@ -1,0 +1,103 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-slate-200;
+  }
+  
+  body {
+    @apply font-sans antialiased text-slate-900 bg-white;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-forest-700 text-white font-medium rounded-xl hover:bg-forest-800 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-forest-700 font-medium rounded-xl border-2 border-forest-700 hover:bg-forest-50 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:ring-offset-2 transition-all duration-200;
+  }
+  
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-slate-600 font-medium rounded-lg hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 transition-all duration-200;
+  }
+  
+  .card {
+    @apply bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow duration-300;
+  }
+  
+  .card-elevated {
+    @apply bg-white rounded-2xl shadow-lg border border-slate-100;
+  }
+  
+  .glass {
+    @apply bg-white/80 backdrop-blur-xl border border-white/20;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-transparent transition-all duration-200;
+  }
+  
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-success { @apply bg-forest-100 text-forest-800; }
+  .badge-warning { @apply bg-amber-100 text-amber-800; }
+  .badge-danger { @apply bg-red-100 text-red-800; }
+  .badge-info { @apply bg-blue-100 text-blue-800; }
+  .badge-purple { @apply bg-purple-100 text-purple-800; }
+  
+  .risk-critical { @apply bg-red-100 text-red-800 border-red-200; }
+  .risk-high { @apply bg-orange-100 text-orange-800 border-orange-200; }
+  .risk-medium { @apply bg-amber-100 text-amber-800 border-amber-200; }
+  .risk-low { @apply bg-forest-100 text-forest-800 border-forest-200; }
+  
+  .section-container {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .page-section {
+    @apply py-16 sm:py-24 lg:py-32;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .animate-delay-100 {
+    animation-delay: 100ms;
+  }
+  
+  .animate-delay-200 {
+    animation-delay: 200ms;
+  }
+  
+  .animate-delay-300 {
+    animation-delay: 300ms;
+  }
+  
+  .animate-delay-500 {
+    animation-delay: 500ms;
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
