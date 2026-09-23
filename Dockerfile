@@ -11,8 +11,9 @@ FROM python:3.11-slim AS runtime
 WORKDIR /app
 
 # System deps for ultralytics/opencv + wget for model download
+# libgl1-mesa-glx renamed to libgl1 in Debian trixie
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx wget \
+    libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1 wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Python deps
