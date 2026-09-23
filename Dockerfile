@@ -10,17 +10,22 @@ RUN npm run build
 FROM python:3.11-slim AS runtime
 WORKDIR /app
 
-# System deps for ultralytics/opencv
+# System deps for ultralytics/opencv + wget for model download
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx \
+    libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-glx wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Python deps
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Models
-COPY yolo11s-taco.pt yolo11n.pt ./
+# Download models at build time
+# TACO YOLOv11s from Hugging Face
+RUN wget -q --show-progress -O yolo11s-taco.pt \
+    "https://huggingface.co/fabiocigaina/TACO-yolo11s/resolve/main/best_model.pt"
+# COCO YOLOv11n from Ultralytics assets
+RUN wget -q --show-progress -O yolo11n.pt \
+    "https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov11n.pt"
 
 # Backend code
 COPY backend/main.py ./backend/
