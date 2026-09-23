@@ -1,4 +1,5 @@
 import os
+import urllib.request
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -6,6 +7,8 @@ from uuid import uuid4
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from ultralytics import YOLO
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,17 +16,56 @@ ROOT = Path(__file__).resolve().parents[1]
 WASTE_MODEL_PATH = ROOT / "yolo11s-taco.pt"
 COCO_MODEL_PATH = ROOT / "yolo11n.pt"
 
-CONF_TACO = float(os.getenv("CONF_TACO", "0.20"))
-CONF_COCO = float(os.getenv("CONF_COCO", "0.25"))
-NMS_IOU = float(os.getenv("NMS_IOU", "0.45"))
+TACO_MODEL_URL = "https://huggingface.co/fabiocigaina/TACO-yolo11s/resolve/main/best_model.pt"
+COCO_MODEL_URL = "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt"
 
-WASTE_MODEL = YOLO(str(WASTE_MODEL_PATH))
-COCO_MODEL = YOLO(str(COCO_MODEL_PATH))
+
+def safe_float_env(key: str, default: float) -> float:
+    val = os.getenv(key)
+    if val:
+        try:
+            return float(val)
+        except ValueError:
+            pass
+    return default
+
+
+CONF_TACO = safe_float_env("CONF_TACO", 0.20)
+CONF_COCO = safe_float_env("CONF_COCO", 0.25)
+NMS_IOU = safe_float_env("NMS_IOU", 0.45)
+
+_waste_model = None
+_coco_model = None
+
+
+def ensure_model_file(model_path: Path, url: str):
+    if not model_path.exists() or model_path.stat().st_size == 0:
+        print(f"Downloading model {model_path.name} from {url}...")
+        urllib.request.urlretrieve(url, str(model_path))
+        print(f"Model {model_path.name} downloaded successfully.")
+
+
+def get_waste_model():
+    global _waste_model
+    if _waste_model is None:
+        ensure_model_file(WASTE_MODEL_PATH, TACO_MODEL_URL)
+        _waste_model = YOLO(str(WASTE_MODEL_PATH))
+    return _waste_model
+
+
+def get_coco_model():
+    global _coco_model
+    if _coco_model is None:
+        ensure_model_file(COCO_MODEL_PATH, COCO_MODEL_URL)
+        _coco_model = YOLO(str(COCO_MODEL_PATH))
+    return _coco_model
+
 
 app = FastAPI(title="WasteVision local inference API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"],
+    allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -147,6 +189,7 @@ def build_composition(detections):
     ]
 
 
+@app.get("/health")
 @app.get("/api/health")
 def health():
     return {
@@ -172,8 +215,11 @@ async def analyze_waste(image: UploadFile = File(...)):
     image_path.write_bytes(await image.read())
 
     try:
-        waste_pred = run_inference(WASTE_MODEL, image_path, conf=CONF_TACO)
-        coco_pred = run_inference(COCO_MODEL, image_path, conf=CONF_COCO)
+        waste_model = get_waste_model()
+        coco_model = get_coco_model()
+
+        waste_pred = run_inference(waste_model, image_path, conf=CONF_TACO)
+        coco_pred = run_inference(coco_model, image_path, conf=CONF_COCO)
 
         h, w = waste_pred.orig_shape
 
@@ -233,3 +279,39 @@ async def recommend(payload: dict):
         },
         "grounded_in": ["Local inference output", "Local safety guidance"],
     }
+
+
+dist_dir = ROOT / "dist"
+if dist_dir.exists():
+    assets_dir = dist_dir / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    @app.get("/")
+    async def serve_index():
+        index_file = dist_dir / "index.html"
+        if index_file.is_file():
+            return FileResponse(str(index_file))
+        return {"status": "ok", "message": "WasteVision backend API is running"}
+
+    @app.get("/{full_path:path}")
+    async def serve_frontend(full_path: str):
+        if full_path.startswith("api/") or full_path == "api":
+            raise HTTPException(404, "API endpoint not found")
+        target = dist_dir / full_path
+        if target.is_file():
+            return FileResponse(str(target))
+        index_file = dist_dir / "index.html"
+        if index_file.is_file():
+            return FileResponse(str(index_file))
+        raise HTTPException(404, "Frontend file not found")
+else:
+    @app.get("/")
+    def root():
+        return {"status": "ok", "message": "WasteVision backend API is running"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=port)

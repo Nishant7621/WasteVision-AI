@@ -10,26 +10,26 @@ RUN npm run build
 FROM python:3.11-slim AS runtime
 WORKDIR /app
 
-# System deps for ultralytics/opencv + wget for model download
-# libgl1-mesa-glx renamed to libgl1 in Debian trixie
+# System deps for ultralytics/opencv/torch + wget/curl
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1 wget \
+    libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 libgomp1 wget curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Python deps
+# Python deps: install CPU-only PyTorch first to reduce image size and build time
 COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Download models at build time
+# Download models at build time with retry
 # TACO YOLOv11s from Hugging Face
-RUN wget -q --show-progress -O yolo11s-taco.pt \
+RUN wget -q --show-progress -t 3 -O yolo11s-taco.pt \
     "https://huggingface.co/fabiocigaina/TACO-yolo11s/resolve/main/best_model.pt"
 # COCO YOLOv11n from Ultralytics assets
-RUN wget -q --show-progress -O yolo11n.pt \
-    "https://github.com/ultralytics/assets/releases/download/v8.2.0/yolov11n.pt"
+RUN wget -q --show-progress -t 3 -O yolo11n.pt \
+    "https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11n.pt"
 
 # Backend code
-COPY backend/main.py ./backend/
+COPY backend/ ./backend/
 
 # Built frontend
 COPY --from=frontend-build /app/dist ./dist
@@ -37,7 +37,8 @@ COPY --from=frontend-build /app/dist ./dist
 ENV PYTHONUNBUFFERED=1 \
     CONF_TACO=0.20 \
     CONF_COCO=0.25 \
-    NMS_IOU=0.45
+    NMS_IOU=0.45 \
+    PORT=8000
 
 EXPOSE 8000
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "backend.main"]
