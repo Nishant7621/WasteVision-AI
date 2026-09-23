@@ -1,0 +1,29 @@
+app = "wastevision-ai"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1
+
+[env]
+  CONF_TACO = "0.20"
+  CONF_COCO = "0.25"
+  NMS_IOU = "0.45"
+
+[health_checks]
+  path = "/api/health"
+  interval = "30s"
+  timeout = "10s"
+  grace_period = "60s"

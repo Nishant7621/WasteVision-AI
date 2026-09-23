@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: wastevision-ai
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: CONF_TACO
+        value: "0.20"
+      - key: CONF_COCO
+        value: "0.25"
+      - key: NMS_IOU
+        value: "0.45"
+    autoDeploy: true

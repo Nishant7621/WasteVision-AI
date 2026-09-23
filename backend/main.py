@@ -1,3 +1,4 @@
+import os
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,6 +12,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 WASTE_MODEL_PATH = ROOT / "yolo11s-taco.pt"
 COCO_MODEL_PATH = ROOT / "yolo11n.pt"
+
+CONF_TACO = float(os.getenv("CONF_TACO", "0.20"))
+CONF_COCO = float(os.getenv("CONF_COCO", "0.25"))
+NMS_IOU = float(os.getenv("NMS_IOU", "0.45"))
 
 WASTE_MODEL = YOLO(str(WASTE_MODEL_PATH))
 COCO_MODEL = YOLO(str(COCO_MODEL_PATH))
@@ -167,17 +172,17 @@ async def analyze_waste(image: UploadFile = File(...)):
     image_path.write_bytes(await image.read())
 
     try:
-        waste_pred = run_inference(WASTE_MODEL, image_path, conf=0.20)
-        coco_pred = run_inference(COCO_MODEL, image_path, conf=0.25)
+        waste_pred = run_inference(WASTE_MODEL, image_path, conf=CONF_TACO)
+        coco_pred = run_inference(COCO_MODEL, image_path, conf=CONF_COCO)
 
         h, w = waste_pred.orig_shape
 
-        waste_dets = process_predictions(waste_pred, TACO_WASTE_MAPPING, "taco", w, h, conf_threshold=0.20)
-        coco_dets = process_predictions(coco_pred, COCO_WASTE_MAPPING, "coco", w, h, conf_threshold=0.25)
+        waste_dets = process_predictions(waste_pred, TACO_WASTE_MAPPING, "taco", w, h, conf_threshold=CONF_TACO)
+        coco_dets = process_predictions(coco_pred, COCO_WASTE_MAPPING, "coco", w, h, conf_threshold=CONF_COCO)
 
         all_detections = waste_dets + coco_dets
 
-        all_detections = nms_detections(all_detections, iou_threshold=0.45)
+        all_detections = nms_detections(all_detections, iou_threshold=NMS_IOU)
 
         for i, det in enumerate(all_detections):
             det["id"] = f"det_{i}"

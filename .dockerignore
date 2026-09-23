@@ -1,0 +1,33 @@
+# Dependencies
+node_modules
+.visionenv
+__pycache__
+*.pyc
+
+# Models (copied explicitly in Dockerfile)
+yolo11s-taco.pt
+yolo11n.pt
+
+# Build outputs
+dist
+build
+*.log
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Tests / docs
+*.md
+!README.md
+tests
+*.test.*
+
+# Runtime uploads
+.runtime-uploads
